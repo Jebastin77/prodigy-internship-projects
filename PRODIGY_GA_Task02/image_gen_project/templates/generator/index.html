@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI Image Generator — PRODIGY_GA_Task02</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0d0f1a;
+      --surface: #161928;
+      --card: #1e2235;
+      --border: #2c3050;
+      --accent: #7c5cfc;
+      --accent2: #c084fc;
+      --text: #e2e8f0;
+      --muted: #94a3b8;
+      --success: #34d399;
+      --danger: #f87171;
+      --radius: 14px;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      min-height: 100vh;
+    }
+
+    /* ── HEADER ── */
+    header {
+      background: linear-gradient(135deg, #1a1040 0%, #0d1a3a 100%);
+      border-bottom: 1px solid var(--border);
+      padding: 1.2rem 2rem;
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+    .logo-icon { font-size: 2rem; }
+    header h1 { font-size: 1.4rem; font-weight: 700; }
+    header span { font-size: 0.8rem; color: var(--muted); display: block; margin-top: 2px; }
+
+    /* ── LAYOUT ── */
+    .layout {
+      display: grid;
+      grid-template-columns: 380px 1fr;
+      gap: 1.5rem;
+      max-width: 1300px;
+      margin: 0 auto;
+      padding: 1.5rem;
+    }
+    @media (max-width: 900px) {
+      .layout { grid-template-columns: 1fr; }
+    }
+
+    /* ── PANEL ── */
+    .panel {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.5rem;
+    }
+    .panel h2 {
+      font-size: 0.9rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      color: var(--muted);
+      margin-bottom: 1.2rem;
+    }
+
+    /* ── FORM ── */
+    label { display: block; font-size: 0.83rem; color: var(--muted); margin-bottom: .35rem; margin-top: 1rem; }
+    label:first-of-type { margin-top: 0; }
+
+    textarea, input[type="number"], input[type="text"], select {
+      width: 100%;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      padding: .6rem .75rem;
+      font-size: .9rem;
+      transition: border-color .2s;
+      outline: none;
+    }
+    textarea:focus, input:focus, select:focus { border-color: var(--accent); }
+    textarea { resize: vertical; min-height: 100px; }
+
+    .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: .75rem; }
+
+    /* Sample prompts */
+    .sample-list {
+      display: flex;
+      flex-direction: column;
+      gap: .4rem;
+      max-height: 180px;
+      overflow-y: auto;
+      margin-top: .5rem;
+    }
+    .sample-chip {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 7px;
+      padding: .45rem .7rem;
+      font-size: .78rem;
+      color: var(--muted);
+      cursor: pointer;
+      transition: all .2s;
+      text-align: left;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .sample-chip:hover { border-color: var(--accent); color: var(--text); background: #252840; }
+
+    /* Generate button */
+    #generate-btn {
+      margin-top: 1.25rem;
+      width: 100%;
+      padding: .85rem;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      border: none;
+      border-radius: 10px;
+      color: #fff;
+      font-size: 1rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: opacity .2s, transform .1s;
+    }
+    #generate-btn:hover { opacity: .9; }
+    #generate-btn:active { transform: scale(.98); }
+    #generate-btn:disabled { opacity: .5; cursor: not-allowed; }
+
+    /* ── RESULT PANEL ── */
+    #result-area {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    .placeholder {
+      height: 420px;
+      border: 2px dashed var(--border);
+      border-radius: var(--radius);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      color: var(--muted);
+      gap: .75rem;
+    }
+    .placeholder .icon { font-size: 3rem; opacity: .4; }
+
+    /* Loading */
+    #loading {
+      display: none;
+      height: 420px;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 1.5rem;
+    }
+    .spinner {
+      width: 56px;
+      height: 56px;
+      border: 5px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    #loading p { color: var(--muted); font-size: .9rem; }
+
+    /* Image result */
+    #img-result { display: none; }
+    #generated-img {
+      width: 100%;
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      display: block;
+    }
+    .meta-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+      gap: .6rem;
+      margin-top: .75rem;
+    }
+    .meta-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: .6rem .8rem;
+      font-size: .8rem;
+    }
+    .meta-card .key { color: var(--muted); margin-bottom: .2rem; }
+    .meta-card .val { font-weight: 600; color: var(--accent2); }
+
+    .opt-prompt-box {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: .75rem 1rem;
+      font-size: .8rem;
+      color: var(--muted);
+      margin-top: .5rem;
+      line-height: 1.5;
+    }
+    .opt-prompt-box strong { color: var(--text); }
+
+    /* Download btn */
+    #download-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: .5rem;
+      padding: .6rem 1.2rem;
+      background: var(--surface);
+      border: 1px solid var(--accent);
+      border-radius: 8px;
+      color: var(--accent2);
+      text-decoration: none;
+      font-size: .85rem;
+      font-weight: 600;
+      transition: background .2s;
+      margin-top: .5rem;
+    }
+    #download-btn:hover { background: #252840; }
+
+    /* Error */
+    #error-box {
+      display: none;
+      background: #2a1a1a;
+      border: 1px solid var(--danger);
+      border-radius: 8px;
+      padding: .8rem 1rem;
+      color: var(--danger);
+      font-size: .85rem;
+      margin-top: .5rem;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="logo-icon">🎨</div>
+  <div>
+    <h1>AI Image Generator</h1>
+    <span>PRODIGY_GA_Task02 · Stable Diffusion v1.5</span>
+  </div>
+</header>
+
+<div class="layout">
+
+  <!-- ── LEFT: Controls ── -->
+  <div>
+    <div class="panel">
+      <h2>⚙ Generation Settings</h2>
+
+      <label>Prompt <span style="color:#7c5cfc;">(describe what you want to see)</span></label>
+      <textarea id="prompt" placeholder="A futuristic city at sunset, neon lights, ultra-detailed…"></textarea>
+
+      <label>Negative Prompt <span style="color:var(--muted);font-size:.75rem;">(what to avoid)</span></label>
+      <textarea id="neg-prompt" rows="2"
+        style="min-height:60px;">blurry, low quality, distorted, deformed, ugly, watermark, text, nsfw</textarea>
+
+      <div class="row2">
+        <div>
+          <label>Inference Steps</label>
+          <input type="number" id="steps" value="25" min="10" max="50" />
+        </div>
+        <div>
+          <label>Guidance Scale</label>
+          <input type="number" id="guidance" value="7.5" min="1" max="20" step="0.5" />
+        </div>
+      </div>
+
+      <div class="row2">
+        <div>
+          <label>Width (px)</label>
+          <select id="width">
+            <option value="256">256</option>
+            <option value="512" selected>512</option>
+            <option value="640">640</option>
+            <option value="768">768</option>
+          </select>
+        </div>
+        <div>
+          <label>Height (px)</label>
+          <select id="height">
+            <option value="256">256</option>
+            <option value="512" selected>512</option>
+            <option value="640">640</option>
+            <option value="768">768</option>
+          </select>
+        </div>
+      </div>
+
+      <label>Seed <span style="font-size:.75rem;color:var(--muted);">(leave blank = random)</span></label>
+      <input type="number" id="seed" placeholder="e.g. 42" />
+
+      <button id="generate-btn" onclick="generateImage()">✨ Generate Image</button>
+      <div id="error-box"></div>
+    </div>
+
+    <!-- Sample Prompts -->
+    <div class="panel" style="margin-top:1rem;">
+      <h2>💡 Sample Prompts</h2>
+      <div class="sample-list">
+        {% for p in sample_prompts %}
+        <button class="sample-chip" onclick="usePrompt(this)" title="{{ p }}">{{ p }}</button>
+        {% empty %}
+        <p style="color:var(--muted);font-size:.85rem;">No sample prompts found.</p>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+
+  <!-- ── RIGHT: Result ── -->
+  <div id="result-area">
+    <div class="panel">
+      <h2>🖼 Generated Image</h2>
+
+      <!-- Placeholder -->
+      <div class="placeholder" id="placeholder">
+        <div class="icon">🖼️</div>
+        <p>Your generated image will appear here</p>
+        <p style="font-size:.8rem;">Enter a prompt and click Generate</p>
+      </div>
+
+      <!-- Loading -->
+      <div id="loading">
+        <div class="spinner"></div>
+        <p id="loading-msg">Generating your image… (this may take 30–90s on CPU)</p>
+      </div>
+
+      <!-- Result -->
+      <div id="img-result">
+        <img id="generated-img" src="" alt="Generated image" />
+        <a id="download-btn" href="#" download>⬇ Download Image</a>
+
+        <div class="opt-prompt-box">
+          <strong>Optimized Prompt sent to model:</strong><br />
+          <span id="opt-prompt-text"></span>
+        </div>
+
+        <div class="meta-grid">
+          <div class="meta-card"><div class="key">Seed</div><div class="val" id="meta-seed">—</div></div>
+          <div class="meta-card"><div class="key">Steps</div><div class="val" id="meta-steps">—</div></div>
+          <div class="meta-card"><div class="key">Guidance</div><div class="val" id="meta-guidance">—</div></div>
+          <div class="meta-card"><div class="key">Size</div><div class="val" id="meta-size">—</div></div>
+          <div class="meta-card"><div class="key">Time</div><div class="val" id="meta-elapsed">—</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /.layout -->
+
+<script>
+  function usePrompt(el) {
+    document.getElementById('prompt').value = el.title || el.textContent.trim();
+  }
+
+  async function generateImage() {
+    const prompt = document.getElementById('prompt').value.trim();
+    if (!prompt) { showError('Please enter a prompt.'); return; }
+
+    const btn = document.getElementById('generate-btn');
+    btn.disabled = true;
+    document.getElementById('placeholder').style.display = 'none';
+    document.getElementById('img-result').style.display = 'none';
+    document.getElementById('error-box').style.display = 'none';
+    document.getElementById('loading').style.display = 'flex';
+
+    const seedVal = document.getElementById('seed').value;
+    const payload = {
+      prompt,
+      negative_prompt: document.getElementById('neg-prompt').value,
+      steps: parseInt(document.getElementById('steps').value),
+      guidance: parseFloat(document.getElementById('guidance').value),
+      width: parseInt(document.getElementById('width').value),
+      height: parseInt(document.getElementById('height').value),
+      seed: seedVal ? parseInt(seedVal) : null,
+    };
+
+    try {
+      const res = await fetch('/generate/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json();
+
+      if (!res.ok || data.error) {
+        showError(data.error || 'Server error.');
+        return;
+      }
+
+      // Show image
+      const img = document.getElementById('generated-img');
+      img.src = data.image_url + '?t=' + Date.now();
+      document.getElementById('download-btn').href = data.image_url;
+      document.getElementById('download-btn').download = data.filename;
+      document.getElementById('opt-prompt-text').textContent = data.optimized_prompt;
+      document.getElementById('meta-seed').textContent = data.seed;
+      document.getElementById('meta-steps').textContent = payload.steps;
+      document.getElementById('meta-guidance').textContent = payload.guidance;
+      document.getElementById('meta-size').textContent = `${payload.width}×${payload.height}`;
+      document.getElementById('meta-elapsed').textContent = data.elapsed + 's';
+
+      document.getElementById('img-result').style.display = 'block';
+
+    } catch (err) {
+      showError('Network error: ' + err.message);
+    } finally {
+      document.getElementById('loading').style.display = 'none';
+      btn.disabled = false;
+    }
+  }
+
+  function showError(msg) {
+    const box = document.getElementById('error-box');
+    box.textContent = '⚠ ' + msg;
+    box.style.display = 'block';
+    document.getElementById('placeholder').style.display = 'flex';
+    document.getElementById('loading').style.display = 'none';
+  }
+</script>
+</body>
+</html>
