@@ -1,0 +1,18 @@
+# Optimized Sample Prompts for Stable Diffusion
+# Format: one prompt per line. Lines starting with # are comments.
+
+A majestic snow-capped mountain range at golden hour, ultra-detailed, photorealistic, 8K, cinematic lighting, wide-angle lens
+
+A serene Japanese zen garden with moss-covered stones and a koi pond, soft morning mist, watercolor illustration style, peaceful atmosphere
+
+A futuristic cyberpunk cityscape at night with neon reflections on rain-soaked streets, ultra-detailed, cinematic composition, vibrant colors
+
+A close-up portrait of a wise elderly woman with kind eyes, dramatic side lighting, oil painting style, fine brushwork, museum quality
+
+An enchanted forest with bioluminescent mushrooms and fireflies, fantasy art, magical atmosphere, deep purple and teal color palette
+
+A cozy autumn coffee shop interior, warm golden lighting, bokeh background, Scandinavian design, inviting atmosphere, hyperrealistic
+
+An astronaut standing on Mars surface gazing at Earth in the sky, cinematic, space photography style, dramatic lighting, ultra-detailed
+
+A vibrant underwater coral reef teeming with colorful tropical fish, National Geographic style, crystal clear water, stunning natural lighting
