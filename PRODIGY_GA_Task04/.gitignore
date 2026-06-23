@@ -1,0 +1,18 @@
+__pycache__/
+*.pyc
+*.pth
+.DS_Store
+*.egg-info/
+.venv/
+venv/
+
+# training artifacts (keep folder structure via .gitkeep, ignore generated content)
+outputs/*.png
+outputs/*.json
+checkpoints/*.pth
+
+# webapp runtime uploads/outputs
+webapp/static/uploads/*
+webapp/static/outputs/*
+!webapp/static/uploads/.gitkeep
+!webapp/static/outputs/.gitkeep

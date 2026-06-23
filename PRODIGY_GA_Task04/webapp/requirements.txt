@@ -1,0 +1,9 @@
+Flask>=3.0.0
+Pillow>=9.0.0
+numpy>=1.23.0
+
+# The web UI re-uses the core project requirements (torch, torchvision, etc.)
+# for real model inference when a trained checkpoint is available.
+# Install both files for full functionality:
+#   pip install -r requirements.txt
+#   pip install -r webapp/requirements.txt

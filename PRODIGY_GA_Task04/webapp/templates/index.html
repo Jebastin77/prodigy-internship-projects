@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pix2Pix Lab — Conditional GAN Studio</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+
+<div class="grid-noise" aria-hidden="true"></div>
+
+<header class="topbar">
+  <div class="topbar__brand">
+    <span class="topbar__mark">P2P</span>
+    <div class="topbar__title">
+      <span class="topbar__name">Pix2Pix Lab</span>
+      <span class="topbar__sub">conditional adversarial translation</span>
+    </div>
+  </div>
+  <div class="topbar__status" id="status-pill">
+    <span class="dot dot--off" id="status-dot"></span>
+    <span id="status-text">checking model status…</span>
+  </div>
+</header>
+
+<main class="stage">
+
+  <section class="hero">
+    <div class="hero__copy">
+      <p class="hero__eyebrow">U-Net Generator &nbsp;×&nbsp; 70×70 PatchGAN Discriminator</p>
+      <h1 class="hero__title">Feed it a source.<br>Watch the patches argue.</h1>
+      <p class="hero__desc">
+        Upload a source image — an edge map, a segmentation mask, an aerial photo, anything paired data
+        was trained on. The generator translates it. The discriminator grid below shows, patch by patch,
+        how convincing each region of the result is — the same 30×30 judgement Pix2Pix optimizes against
+        during training.
+      </p>
+    </div>
+    <div class="hero__stats" id="arch-stats">
+      <div class="stat">
+        <span class="stat__label">generator</span>
+        <span class="stat__value">U-Net, 8 enc / 7 dec</span>
+      </div>
+      <div class="stat">
+        <span class="stat__label">discriminator</span>
+        <span class="stat__value">PatchGAN, 70×70</span>
+      </div>
+      <div class="stat">
+        <span class="stat__label">λ (L1 weight)</span>
+        <span class="stat__value">100</span>
+      </div>
+      <div class="stat">
+        <span class="stat__label">resolution</span>
+        <span class="stat__value">256 × 256</span>
+      </div>
+    </div>
+  </section>
+
+  <section class="lab">
+
+    <!-- LEFT: upload + source -->
+    <div class="panel panel--source">
+      <div class="panel__head">
+        <span class="panel__index">01</span>
+        <h2 class="panel__title">Source</h2>
+      </div>
+
+      <div class="dropzone" id="dropzone" tabindex="0" role="button" aria-label="Upload source image">
+        <input type="file" id="file-input" accept="image/png,image/jpeg,image/webp,image/bmp" hidden>
+        <div class="dropzone__content" id="dropzone-empty">
+          <svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M20 5V27M20 5L12 13M20 5L28 13" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M6 27V31C6 32.6569 7.34315 34 9 34H31C32.6569 34 34 32.6569 34 31V27" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          <p class="dropzone__title">Drop an image, or click to browse</p>
+          <p class="dropzone__hint">PNG / JPG / WEBP — resized to 256×256</p>
+        </div>
+        <img id="preview-img" class="dropzone__preview" alt="" hidden>
+      </div>
+
+      <div class="style-select">
+        <span class="style-select__label">Demo style</span>
+        <div class="style-select__options" id="style-options">
+          <button class="style-chip is-active" data-style="edges">Edge map</button>
+          <button class="style-chip" data-style="segmentation">Segmentation</button>
+          <button class="style-chip" data-style="night">Day → Night</button>
+        </div>
+        <p class="style-select__note" id="style-note">Active only when no trained checkpoint is loaded — see status above.</p>
+      </div>
+
+      <button class="run-btn" id="run-btn" disabled>
+        <span id="run-btn-label">Translate image</span>
+      </button>
+    </div>
+
+    <!-- RIGHT: output + patch grid -->
+    <div class="panel panel--output">
+      <div class="panel__head">
+        <span class="panel__index">02</span>
+        <h2 class="panel__title">Generated</h2>
+        <span class="mode-tag" id="mode-tag" hidden></span>
+      </div>
+
+      <div class="output-frame" id="output-frame">
+        <div class="output-frame__empty" id="output-empty">
+          <p>Awaiting input —</p>
+          <p class="dim">your translated image and the discriminator's patch verdict will render here.</p>
+        </div>
+        <div class="output-frame__canvas" id="output-canvas" hidden>
+          <img id="output-img" alt="Generated translation">
+          <svg id="patch-overlay" class="patch-overlay" viewBox="0 0 256 256" preserveAspectRatio="none"></svg>
+        </div>
+      </div>
+
+      <div class="legend">
+        <span class="legend__item"><span class="legend__swatch legend__swatch--real"></span>patch reads as real</span>
+        <span class="legend__item"><span class="legend__swatch legend__swatch--fake"></span>patch reads as synthetic</span>
+        <label class="legend__toggle">
+          <input type="checkbox" id="overlay-toggle" checked>
+          show patch grid
+        </label>
+      </div>
+    </div>
+
+  </section>
+
+  <section class="strip">
+    <h3 class="strip__title">How the verdict is drawn</h3>
+    <ol class="strip__steps">
+      <li><span class="strip__num">01</span>Source image is resized to 256×256 and normalized to [-1, 1].</li>
+      <li><span class="strip__num">02</span>The U-Net generator encodes it down to a 1×1×512 bottleneck, then decodes it back up using skip connections from every encoder stage.</li>
+      <li><span class="strip__num">03</span>The PatchGAN discriminator scores 900 overlapping 70×70 patches across the result — each cell below is one of its verdicts.</li>
+      <li><span class="strip__num">04</span>During training, G is pushed to maximize these scores while staying within λ·L1 of the ground truth; D is pushed to call it correctly.</li>
+    </ol>
+  </section>
+
+  <footer class="page-footer">
+    <span>Pix2Pix Lab — built on the cGAN architecture from Isola et al., CVPR 2017</span>
+    <span class="page-footer__dim">Prodigy InfoTech · Generative AI Track · Task 04</span>
+  </footer>
+
+</main>
+
+<script src="{{ url_for('static', filename='app.js') }}"></script>
+</body>
+</html>
